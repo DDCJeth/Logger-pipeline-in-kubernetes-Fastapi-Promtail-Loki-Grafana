@@ -1,5 +1,5 @@
 src/__pycahe__
-src/*.pyc
+src/__pycahe__/*
 app_logs_*.log
 *.log
 my_env/*
