@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-loki-pod
+  labels:
+    app: nginx-loki
+spec:
+  containers:
+  - name: nginx
+    image: nginx:latest
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: nginx-logs
+      mountPath: /var/log/nginx
+
+  - name: promtail
+    image: grafana/promtail:latest
+    args:
+      - -config.file=/etc/promtail/config.yml
+    volumeMounts:
+    - name: nginx-logs
+      mountPath: /var/log/nginx
+    - name: promtail-config
+      mountPath: /etc/promtail
+
+  volumes:
+  - name: nginx-logs
+    emptyDir: {}
+  - name: promtail-config
+    configMap:
+      name: promtail-config
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  labels:
+    app: nginx-loki
+data:
+  config.yml: |
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+
+    positions:
+      filename: /tmp/positions.yaml
+
+    clients:
+      - url: http://loki-gateway.default.svc.cluster.local/loki/api/v1/push
+        headers:
+          X-Scope-OrgID: foo
+
+    scrape_configs:
+    - job_name: nginx-logs
+      static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          __path__: /var/log/nginx/access.log

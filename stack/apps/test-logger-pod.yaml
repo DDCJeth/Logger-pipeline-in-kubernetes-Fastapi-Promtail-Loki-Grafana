@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: logger
+  name: logger
+spec:
+  containers:
+  - command:
+    - sleep
+    - "7200"
+    image: debian:stable-slim
+    name: logger
+    resources: {}
+    volumeMounts:
+    - name: log-volume
+      mountPath: /app/logs
+  volumes:
+  - name: log-volume
+    hostPath:
+      path: /var/log/fastapi-app  # Chemin sur l'hôte
+      type: DirectoryOrCreate
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}

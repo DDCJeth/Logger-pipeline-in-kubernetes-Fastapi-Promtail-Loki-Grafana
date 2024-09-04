@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-deployment
+  labels:
+    app: fastapi
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fastapi
+  template:
+    metadata:
+      labels:
+        app: fastapi
+    spec:
+      containers:
+      - name: fastapi-container
+        image: ddcj/fastapi-logger:v2
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: log-volume
+          mountPath: /app/logs
+        env:
+        - name: LOG_CONFIG_PATH
+          value: "/app/logging_config.yaml"
+      volumes:
+      - name: log-volume
+        hostPath:
+          path: /var/log/fastapi-app  # Chemin sur l'hôte
+          type: DirectoryOrCreate
+
+
+
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  labels:
+    app: nginx-loki
+data:
+  config.yml: |
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+
+    positions:
+      filename: /tmp/positions.yaml
+
+    clients:
+      - url: http://loki-gateway.default.svc.cluster.local/loki/api/v1/push
+        headers:
+          X-Scope-OrgID: foo
+
+    scrape_configs:
+    - job_name: nginx-logs
+      static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          __path__: /var/log/nginx/access.log

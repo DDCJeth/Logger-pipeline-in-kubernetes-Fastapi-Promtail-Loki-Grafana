@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-deployment
+  labels:
+    app: fastapi
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fastapi
+  template:
+    metadata:
+      labels:
+        app: fastapi
+    spec:
+      containers:
+      - name: fastapi-container
+        image: ddcj/fastapi-logger:v2
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: log-volume
+          mountPath: /app/logs
+        env:
+        - name: LOG_CONFIG_PATH
+          value: "/app/logging_config.yaml"
+      - name: promtail
+        image: grafana/promtail:latest
+        args:
+          - -config.file=/etc/promtail/config.yml
+        volumeMounts:
+        - name: log-volume
+          mountPath: /app/logs
+        - name: promtail-config
+          mountPath: /etc/promtail
+
+      volumes:
+      - name: log-volume
+        emptyDir: {}
+      - name: promtail-config
+        configMap:
+          name: promtail-config
+
+
+
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  labels:
+    app: nginx-loki
+data:
+  config.yml: |
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+
+    positions:
+      filename: /tmp/positions.yaml
+
+    clients:
+      - url: http://loki-gateway.default.svc.cluster.local/loki/api/v1/push
+        headers:
+          X-Scope-OrgID: foo
+
+    scrape_configs:
+    - job_name: api-logs
+      static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: api
+          __path__: /app/logs/uvicorn.log
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: fastapi
+  name: fastapi-deployment
+spec:
+  ports:
+  - port: 8000
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app: fastapi
+status:
+  loadBalancer: {}
