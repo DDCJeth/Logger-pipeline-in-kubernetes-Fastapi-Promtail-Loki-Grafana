@@ -1,0 +1,10 @@
+.gitignore
+app_logs_*.log
+src/__pycache__
+*.log
+my_env
+README.md
+logs/*
+stack
+rancher-requirements.txt
+draft

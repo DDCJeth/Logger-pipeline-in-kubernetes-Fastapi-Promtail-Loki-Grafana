@@ -1,0 +1,7 @@
+src/__pycahe__
+app_logs_*.log
+*.log
+my_env/*
+logs/*
+rancher-requirements.txt
+draft
